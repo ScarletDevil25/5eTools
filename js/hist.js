@@ -1,1 +1,207 @@
-"use strict";class Hist{static hashChange(a){if(Hist.isHistorySuppressed)return void Hist.setSuppressHistory(!1);const[b,...c]=Hist.getHashParts();let d=!1;if(b!==Hist.lastLoadedLink||0===c.length||a)if(Hist.lastLoadedLink=b,b===HASH_BLANK)d=!0;else{const a=Hist.getActiveListItem(b);if(void 0===a)return"function"==typeof handleUnknownHash&&window.location.hash.length?void handleUnknownHash(b,c):void Hist._freshLoad();const d=a.ix;void 0===d?Hist._freshLoad():(Hist.lastLoadedId=a.ix,loadHash(a.ix),document.title=`${a.name?`${a.name} - `:""}5etools`)}"function"==typeof loadSubHash&&(0<c.length||a)&&loadSubHash(c),d&&Hist._freshLoad()}static init(a){window.onhashchange=Hist.hashChange,window.location.hash.length?Hist.hashChange():Hist._freshLoad(),a&&(Hist.initialLoad=!1)}static setSuppressHistory(a){Hist.isHistorySuppressed=a}static getSelectedListItem(){const[a]=Hist.getHashParts();return Hist.getActiveListItem(a)}static getSelectedListElementWithLocation(){const[a]=Hist.getHashParts();return Hist.getActiveListItem(a,!0)}static getHashParts(){return Hist.util.getHashParts(window.location.hash)}static getActiveListItem(a,b){const c=ListUtil.getPrimaryLists();if(c&&c.length)for(let d=0;d<c.length;++d){const e=c[d],f=e.items.findIndex(b=>b.values.hash===a);if(~f)return b?{item:e.items[f],x:d,y:f,list:e}:e.items[f]}}static _freshLoad(){setTimeout(()=>{const a=$("#listcontainer").find(".list a").attr("href");if(a){const b=location.hash.split(HASH_PART_SEP),c=`${a}${1<b.length?`${HASH_PART_SEP}${b.slice(1).join(HASH_PART_SEP)}`:""}`;location.replace(c)}},1)}static cleanSetHash(a){window.location.hash=Hist.util.getCleanHash(a)}static getHashSource(){const[a]=Hist.getHashParts();return a?a.split(HASH_LIST_SEP).last():null}static getSubHash(a){return Hist.util.getSubHash(window.location.hash,a)}static setSubhash(a,b){const c=Hist.util.setSubhash(window.location.hash,a,b);Hist.cleanSetHash(c)}}Hist.lastLoadedLink=null,Hist.lastLoadedId=null,Hist.initialLoad=!0,Hist.isHistorySuppressed=!1,Hist.util=class{static getCleanHash(a){return a.replace(/,+/g,",").replace(/,$/,"").toLowerCase()}static getHashParts(a){return"#"===a[0]&&(a=a.slice(1)),a.toLowerCase().replace(/%27/g,"'").split(HASH_PART_SEP)}static getSubHash(a,b){const[c,...d]=Hist.util.getHashParts(a),e=`${b}${HASH_SUB_KV_SEP}`,f=d.find(a=>a.startsWith(e));return f?f.slice(e.length):null}static setSubhash(a,b,c){b.endsWith(HASH_SUB_KV_SEP)&&(b=b.slice(0,-1));const[d,...e]=Hist.util.getHashParts(a);if(!d)return"";const f=`${b}${HASH_SUB_KV_SEP}`,g=[d];return e.length&&e.filter(a=>!a.startsWith(f)).forEach(a=>g.push(a)),null!=c&&g.push(`${f}${c}`),Hist.util.getCleanHash(g.join(HASH_PART_SEP))}};
+"use strict";
+
+class Hist {
+	static hashChange ({isForceLoad, isBlankFilterLoad = false} = {}) {
+		if (Hist.isHistorySuppressed) {
+			Hist.setSuppressHistory(false);
+			return;
+		}
+
+		const [link, ...sub] = Hist.getHashParts();
+
+		if (link !== Hist.lastLoadedLink || sub.length === 0 || isForceLoad) {
+			Hist.lastLoadedLink = link;
+			if (link === HASH_BLANK) {
+				isBlankFilterLoad = true;
+			} else {
+				const listItem = Hist.getActiveListItem(link);
+
+				if (listItem == null) {
+					if (typeof pHandleUnknownHash === "function" && window.location.hash.length && Hist._lastUnknownLink !== link) {
+						Hist._lastUnknownLink = link;
+						pHandleUnknownHash(link, sub);
+						return;
+					} else {
+						Hist._freshLoad();
+						return;
+					}
+				}
+
+				const toLoad = listItem.ix;
+				if (toLoad === undefined) Hist._freshLoad();
+				else {
+					Hist.lastLoadedId = listItem.ix;
+					loadHash(listItem.ix);
+					document.title = `${listItem.name ? `${listItem.name} - ` : ""}5etools`;
+				}
+			}
+		}
+
+		if (typeof loadSubHash === "function" && (sub.length > 0 || isForceLoad)) loadSubHash(sub);
+		if (isBlankFilterLoad) Hist._freshLoad();
+	}
+
+	static init (initialLoadComplete) {
+		window.onhashchange = () => Hist.hashChange({isForceLoad: true});
+		if (window.location.hash.length) {
+			Hist.hashChange();
+		} else {
+			Hist._freshLoad();
+		}
+		if (initialLoadComplete) Hist.initialLoad = false;
+	}
+
+	/**
+	 * Allows the hash to be modified without triggering a hashchange
+	 * @param val
+	 */
+	static setSuppressHistory (val) {
+		Hist.isHistorySuppressed = val;
+	}
+
+	static _listPage = null;
+
+	static setListPage (listPage) { this._listPage = listPage; }
+
+	static getSelectedListItem () {
+		const [link] = Hist.getHashParts();
+		return Hist.getActiveListItem(link);
+	}
+
+	static getSelectedListElementWithLocation () {
+		const [link] = Hist.getHashParts();
+		return Hist.getActiveListItem(link, true);
+	}
+
+	static getHashParts () {
+		return Hist.util.getHashParts(window.location.hash);
+	}
+
+	static getActiveListItem (link, getIndex) {
+		const primaryLists = this._listPage.primaryLists;
+		if (primaryLists && primaryLists.length) {
+			for (let x = 0; x < primaryLists.length; ++x) {
+				const list = primaryLists[x];
+
+				const foundItemIx = list.items.findIndex(it => it.values.hash === link);
+				if (~foundItemIx) {
+					if (getIndex) return {item: list.items[foundItemIx], x: x, y: foundItemIx, list};
+					return list.items[foundItemIx];
+				}
+			}
+		}
+	}
+
+	static _freshLoad () {
+		// defer this, in case the list needs to filter first
+		setTimeout(() => {
+			const goTo = $("#listcontainer").find(".list a").attr("href");
+			if (goTo) {
+				const parts = location.hash.split(HASH_PART_SEP);
+				const fullHash = `${goTo}${parts.length > 1 ? `${HASH_PART_SEP}${parts.slice(1).join(HASH_PART_SEP)}` : ""}`;
+				location.replace(fullHash);
+			}
+		}, 1);
+	}
+
+	static cleanSetHash (toSet) {
+		window.location.hash = Hist.util.getCleanHash(toSet);
+	}
+
+	static getHashSource () {
+		const [link] = Hist.getHashParts();
+		// by convention, the source is the last hash segment
+		return link ? link.split(HASH_LIST_SEP).last() : null;
+	}
+
+	static getSubHash (key) {
+		return Hist.util.getSubHash(window.location.hash, key);
+	}
+
+	/**
+	 * Sets a subhash with the key specified, overwriting any existing.
+	 * @param key Subhash key.
+	 * @param val Subhash value. Passing a nully object removes the k/v pair.
+	 */
+	static setSubhash (key, val) {
+		const nxtHash = Hist.util.setSubhash(window.location.hash, key, val);
+		Hist.cleanSetHash(nxtHash);
+	}
+
+	static setMainHash (hash) {
+		const subHashPart = Hist.util.getHashParts(window.location.hash, key, val).slice(1).join(HASH_PART_SEP);
+		Hist.cleanSetHash([hash, subHashPart].filter(Boolean).join(HASH_PART_SEP));
+	}
+
+	static replaceHistoryHash (hash) {
+		window.history.replaceState(
+			{},
+			document.title,
+			`${location.origin}${location.pathname}${hash ? `#${hash}` : ""}`,
+		);
+	}
+}
+Hist.lastLoadedLink = null;
+Hist._lastUnknownLink = null;
+Hist.lastLoadedId = null;
+Hist.initialLoad = true;
+Hist.isHistorySuppressed = false;
+
+Hist.util = class {
+	static getCleanHash (hash) {
+		return hash.replace(/,+/g, ",").replace(/,$/, "").toLowerCase();
+	}
+
+	static _SYMS_NO_ENCODE = [/(,)/g, /(:)/g, /(=)/g];
+
+	static getHashParts (location, {isReturnEncoded = false} = {}) {
+		if (location[0] === "#") location = location.slice(1);
+
+		// Handle junk from external ads
+		if (location === "google_vignette") location = "";
+
+		if (isReturnEncoded) {
+			return location
+				.split(HASH_PART_SEP);
+		}
+
+		// region Normalize encoding
+		let pts = [location];
+		this._SYMS_NO_ENCODE.forEach(re => {
+			pts = pts.map(pt => pt.split(re)).flat();
+		});
+		pts = pts.map(pt => {
+			if (this._SYMS_NO_ENCODE.some(re => re.test(pt))) return pt;
+			return decodeURIComponent(pt).toUrlified();
+		});
+		location = pts.join("");
+		// endregion
+
+		return location
+			.split(HASH_PART_SEP);
+	}
+
+	static getSubHash (location, key) {
+		const [link, ...sub] = Hist.util.getHashParts(location);
+		const hKey = `${key}${HASH_SUB_KV_SEP}`;
+		const part = sub.find(it => it.startsWith(hKey));
+		if (part) return part.slice(hKey.length);
+		return null;
+	}
+
+	static setSubhash (location, key, val) {
+		if (key.endsWith(HASH_SUB_KV_SEP)) key = key.slice(0, -1);
+
+		const [link, ...sub] = Hist.util.getHashParts(location);
+		if (!link) return "";
+
+		const hKey = `${key}${HASH_SUB_KV_SEP}`;
+		const out = [link];
+		if (sub.length) sub.filter(it => !it.startsWith(hKey)).forEach(it => out.push(it));
+		if (val != null) out.push(`${hKey}${val}`);
+
+		return Hist.util.getCleanHash(out.join(HASH_PART_SEP));
+	}
+};
+
+globalThis.Hist = Hist;

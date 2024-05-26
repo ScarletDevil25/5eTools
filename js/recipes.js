@@ -1,1 +1,152 @@
-"use strict";class RecipesPage extends ListPage{constructor(){const pageFilter=new PageFilterRecipes;super({dataSource:DataUtil.recipe.loadJSON,brewDataSource:DataUtil.recipe.loadBrew,pageFilter:pageFilter,listClass:"recipes",sublistClass:"subrecipes",sublistOptions:{pCustomHashHandler:RecipesPage._sublist_customHashHandler.bind(RecipesPage),customHashUnpacker:RecipesPage._sublist_customHashUnpacker.bind(RecipesPage)},dataProps:["recipe"],fnGetPinListData:()=>this._getCurrentPinListData(),bindPopoutButtonOptions:{fnGetToRender:()=>this._lastRender}});this._lastRender=null}async _pHandleBrew(homebrew){if(homebrew.recipe){homebrew=MiscUtil.copy(homebrew);DataUtil.recipe.postProcessData(homebrew)}return super._pHandleBrew(homebrew)}static _sublist_customHashHandler(r,uid){return Renderer.recipe.getScaledRecipe(r,Number(uid.split("_").last()))}static _sublist_customHashUnpacker(customHashId){return{scaled:Number(customHashId.split("_").last()),customHashId:customHashId}}_getCurrentPinListData(){if(this._lastRender?._scaleFactor){return{scaled:this._lastRender._scaleFactor,customHashId:this._getCustomHashId(this._lastRender)}}}_getCustomHashId(it){if(!it._scaleFactor)return null;return`${it.name}_${it.source}_${it._scaleFactor}`.toLowerCase()}getListItem(it,rpI,isExcluded){this._pageFilter.mutateAndAddToFilters(it,isExcluded);const eleLi=document.createElement("div");eleLi.className=`lst__row flex-col ${isExcluded?"lst__row--blacklisted":""}`;const source=Parser.sourceJsonToAbv(it.source);const hash=UrlUtil.autoEncodeHash(it);eleLi.innerHTML=`<a href="#${hash}" class="lst--border lst__row-inner">\n\t\t\t<span class="col-6 bold pl-0">${it.name}</span>\n\t\t\t<span class="col-4 text-center">${it.type||"—"}</span>\n\t\t\t<span class="col-2 text-center ${Parser.sourceJsonToColor(it.source)} pr-0" title="${Parser.sourceJsonToFull(it.source)}" ${BrewUtil.sourceJsonToStyle(it.source)}>${source}</span>\n\t\t</a>`;const listItem=new ListItem(rpI,eleLi,it.name,{hash:hash,source:source,type:it.type},{uniqueId:it.uniqueId?it.uniqueId:rpI,isExcluded:isExcluded});eleLi.addEventListener("click",(evt=>this._list.doSelect(listItem,evt)));eleLi.addEventListener("contextmenu",(evt=>ListUtil.openContextMenu(evt,this._list,listItem)));return listItem}handleFilterChange(){const f=this._filterBox.getValues();this._list.filter((item=>this._pageFilter.toDisplay(f,this._dataList[item.ix])));FilterBox.selectFirstVisible(this._dataList)}getSublistItem(itRaw,pinId,addCount,data){data=data||{};const it=data.scaled?Renderer.recipe.getScaledRecipe(itRaw,data.scaled):itRaw;const name=it._displayName||it.name;const hash=UrlUtil.autoEncodeHash(it);const $ele=$(`<div class="lst__row lst__row--sublist flex-col">\n\t\t\t<a href="#${hash}" class="lst--border lst__row-inner">\n\t\t\t\t<span class="bold col-9 pl-0">${name}</span>\n\t\t\t\t<span class="col-3 text-center pr-0">${it.type||"—"}</span>\n\t\t\t</a>\n\t\t</div>`).contextmenu((evt=>ListUtil.openSubContextMenu(evt,listItem))).click((evt=>ListUtil.sublist.doSelect(listItem,evt)));const listItem=new ListItem(pinId,$ele,name,{hash:hash,type:it.type},{uniqueId:data.uniqueId||"",customHashId:this._getCustomHashId(it)});return listItem}doLoadHash(id){const it=this._dataList[id];this._$pgContent.empty();const tabMetas=[new Renderer.utils.TabButton({label:"Traits",fnPopulate:this._renderStats.bind(this,it),isVisible:true}),new Renderer.utils.TabButton({label:"Info",fnPopulate:this._renderFluff.bind(this,it),isVisible:Renderer.utils.hasFluffText(it,"recipeFluff")}),new Renderer.utils.TabButton({label:"Images",fnPopulate:this._renderFluff.bind(this,it,true),isVisible:Renderer.utils.hasFluffImages(it,"recipeFluff")})];Renderer.utils.bindTabButtons({tabButtons:tabMetas.filter((it=>it.isVisible)),tabLabelReference:tabMetas.map((it=>it.label))});ListUtil.updateSelected()}_renderStats(it,scaleFactor=null){if(scaleFactor!=null)it=Renderer.recipe.getScaledRecipe(it,scaleFactor);const $selScaleFactor=$(`\n\t\t\t<select title="Scale Recipe" class="form-control input-xs form-control--minimal">\n\t\t\t\t${[.5,1,2,3,4].map((it=>`<option value="${it}">×${it}</option>`))}\n\t\t\t</select>`).change((()=>{const scaleFactor=Number($selScaleFactor.val());if(scaleFactor!==this._lastRender?._scaleFactor){if(scaleFactor===1)Hist.setSubhash(VeCt.HASH_SCALED,null);else Hist.setSubhash(VeCt.HASH_SCALED,scaleFactor)}}));$selScaleFactor.val(`${scaleFactor||1}`);this._$pgContent.empty().append(RenderRecipes.$getRenderedRecipe(it,{$selScaleFactor:$selScaleFactor}));this._lastRender=it}_renderFluff(it,isImageTab){return Renderer.utils.pBuildFluffTab({isImageTab:isImageTab,$content:this._$pgContent,pFnGetFluff:Renderer.recipe.pGetFluff,entity:it})}async pDoLoadSubHash(sub){sub=this._filterBox.setFromSubHashes(sub);await ListUtil.pSetFromSubHashes(sub);const scaledHash=sub.find((it=>it.startsWith(RecipesPage._HASH_START_SCALED)));if(scaledHash){const scaleTo=Number(UrlUtil.unpackSubHash(scaledHash)[VeCt.HASH_SCALED][0]);const r=this._dataList[Hist.lastLoadedId];this._renderStats(r,scaleTo)}}_getSearchCache(entity){if(!entity.ingredients&&!entity.instructions)return"";const ptrOut={_:""};this._getSearchCache_handleEntryProp(entity,"ingredients",ptrOut);this._getSearchCache_handleEntryProp(entity,"instructions",ptrOut);return ptrOut._}}RecipesPage._HASH_START_SCALED=`${VeCt.HASH_SCALED}${HASH_SUB_KV_SEP}`;const recipesPage=new RecipesPage;window.addEventListener("load",(()=>recipesPage.pOnLoad()));
+"use strict";
+
+class RecipesSublistManager extends SublistManager {
+	_getCustomHashId ({entity}) {
+		return Renderer.recipe.getCustomHashId(entity);
+	}
+
+	static get _ROW_TEMPLATE () {
+		return [
+			new SublistCellTemplate({
+				name: "Name",
+				css: "bold ve-col-9 pl-0",
+				colStyle: "",
+			}),
+			new SublistCellTemplate({
+				name: "Type",
+				css: "ve-col-3 ve-text-center pr-0",
+				colStyle: "text-center",
+			}),
+		];
+	}
+
+	async pGetSublistItem (itRaw, hash, {customHashId = null} = {}) {
+		const it = await Renderer.hover.pApplyCustomHashId(UrlUtil.getCurrentPage(), itRaw, customHashId);
+		const name = it._displayName || it.name;
+		const cellsText = [name, it.type || "\u2014"];
+
+		const $ele = $(`<div class="lst__row lst__row--sublist ve-flex-col">
+			<a href="#${hash}" class="lst--border lst__row-inner">
+				${this.constructor._getRowCellsHtml({values: cellsText})}
+			</a>
+		</div>`)
+			.contextmenu(evt => this._handleSublistItemContextMenu(evt, listItem))
+			.click(evt => this._listSub.doSelect(listItem, evt));
+
+		const listItem = new ListItem(
+			hash,
+			$ele,
+			name,
+			{
+				hash,
+				type: it.type,
+			},
+			{
+				entity: it,
+				mdRow: [...cellsText],
+				customHashId,
+			},
+		);
+		return listItem;
+	}
+}
+
+class RecipesPage extends ListPage {
+	constructor () {
+		const pageFilter = new PageFilterRecipes();
+		const pFnGetFluff = Renderer.recipe.pGetFluff.bind(Renderer.recipe);
+
+		super({
+			dataSource: DataUtil.recipe.loadJSON.bind(DataUtil.recipe),
+			prereleaseDataSource: DataUtil.recipe.loadPrerelease.bind(DataUtil.recipe),
+			brewDataSource: DataUtil.recipe.loadBrew.bind(DataUtil.recipe),
+
+			pFnGetFluff,
+
+			pageFilter,
+
+			dataProps: ["recipe"],
+
+			isMarkdownPopout: true,
+
+			listSyntax: new ListSyntaxRecipes({fnGetDataList: () => this._dataList, pFnGetFluff}),
+		});
+	}
+
+	getListItem (ent, rpI, isExcluded) {
+		this._pageFilter.mutateAndAddToFilters(ent, isExcluded);
+
+		const eleLi = document.createElement("div");
+		eleLi.className = `lst__row ve-flex-col ${isExcluded ? "lst__row--blocklisted" : ""}`;
+
+		const source = Parser.sourceJsonToAbv(ent.source);
+		const hash = UrlUtil.autoEncodeHash(ent);
+
+		eleLi.innerHTML = `<a href="#${hash}" class="lst--border lst__row-inner">
+			<span class="ve-col-6 bold pl-0">${ent.name}</span>
+			<span class="ve-col-4 ve-text-center">${ent.type || "\u2014"}</span>
+			<span class="ve-col-2 ve-text-center ${Parser.sourceJsonToColor(ent.source)} pr-0" title="${Parser.sourceJsonToFull(ent.source)}" ${Parser.sourceJsonToStyle(ent.source)}>${source}</span>
+		</a>`;
+
+		const listItem = new ListItem(
+			rpI,
+			eleLi,
+			ent.name,
+			{
+				hash,
+				source,
+				type: ent.type,
+				alias: PageFilterRecipes.getListAliases(ent),
+			},
+			{
+				isExcluded,
+			},
+		);
+
+		eleLi.addEventListener("click", (evt) => this._list.doSelect(listItem, evt));
+		eleLi.addEventListener("contextmenu", (evt) => this._openContextMenu(evt, this._list, listItem));
+
+		return listItem;
+	}
+
+	_tabTitleStats = "Recipe";
+
+	_renderStats_doBuildStatsTab ({ent, scaleFactor = null}) {
+		if (scaleFactor != null) ent = Renderer.recipe.getScaledRecipe(ent, scaleFactor);
+
+		const $selScaleFactor = $(`
+			<select title="Scale Recipe" class="form-control input-xs form-control--minimal ve-popwindow__hidden">
+				${[0.5, 1, 2, 3, 4].map(it => `<option value="${it}">×${it}</option>`)}
+			</select>`)
+			.change(() => {
+				const scaleFactor = Number($selScaleFactor.val());
+
+				if (scaleFactor !== this._lastRender?._scaleFactor) {
+					if (scaleFactor === 1) Hist.setSubhash(VeCt.HASH_SCALED, null);
+					else Hist.setSubhash(VeCt.HASH_SCALED, scaleFactor);
+				}
+			});
+		$selScaleFactor.val(`${scaleFactor || 1}`);
+
+		this._$pgContent.empty().append(RenderRecipes.$getRenderedRecipe(ent, {$selScaleFactor}));
+		Renderer.initLazyImageLoaders();
+		this._lastRender = {entity: ent};
+	}
+
+	async _pDoLoadSubHash ({sub, lockToken}) {
+		sub = await super._pDoLoadSubHash({sub, lockToken});
+
+		const scaledHash = sub.find(it => it.startsWith(RecipesPage._HASH_START_SCALED));
+		if (scaledHash) {
+			const scaleFactor = Number(UrlUtil.unpackSubHash(scaledHash)[VeCt.HASH_SCALED][0]);
+			const r = this._dataList[Hist.lastLoadedId];
+			this._renderStats_doBuildStatsTab({ent: r, scaleFactor});
+		}
+	}
+}
+RecipesPage._HASH_START_SCALED = `${VeCt.HASH_SCALED}${HASH_SUB_KV_SEP}`;
+
+const recipesPage = new RecipesPage();
+recipesPage.sublistManager = new RecipesSublistManager();
+
+window.addEventListener("load", () => recipesPage.pOnLoad());

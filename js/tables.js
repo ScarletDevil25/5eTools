@@ -1,1 +1,151 @@
-"use strict";class TablesPage extends ListPage{constructor(){const pageFilter=new PageFilterTables;super({dataSource:DataUtil.table.loadJSON,pageFilter:pageFilter,listClass:"tablesdata",listOptions:{sortByInitial:"sortName"},sublistClass:"subtablesdata",dataProps:["table","tableGroup"]})}getListItem(it,tbI,isExcluded){this._pageFilter.mutateAndAddToFilters(it,isExcluded);const sortName=it.name.replace(/^\s*([\d,.]+)\s*gp/,((...m)=>m[1].replace(Parser._numberCleanRegexp,"").padStart(9,"0")));const eleLi=document.createElement("div");eleLi.className=`lst__row flex-col ${isExcluded?"lst__row--blacklisted":""}`;const source=Parser.sourceJsonToAbv(it.source);const hash=UrlUtil.autoEncodeHash(it);eleLi.innerHTML=`<a href="#${hash}" class="lst--border lst__row-inner">\n\t\t\t<span class="bold col-10 pl-0">${it.name}</span>\n\t\t\t<span class="col-2 text-center ${Parser.sourceJsonToColor(it.source)} pr-0" title="${Parser.sourceJsonToFull(it.source)}" ${BrewUtil.sourceJsonToStyle(it.source)}>${source}</span>\n\t\t</a>`;const listItem=new ListItem(tbI,eleLi,it.name,{hash:hash,sortName:sortName,source:source},{uniqueId:it.uniqueId?it.uniqueId:tbI,isExcluded:isExcluded});eleLi.addEventListener("click",(evt=>this._list.doSelect(listItem,evt)));eleLi.addEventListener("contextmenu",(evt=>ListUtil.openContextMenu(evt,this._list,listItem)));return listItem}handleFilterChange(){const f=this._filterBox.getValues();this._list.filter((item=>this._pageFilter.toDisplay(f,this._dataList[item.ix])));FilterBox.selectFirstVisible(this._dataList)}getSublistItem(it,pinId){const hash=UrlUtil.autoEncodeHash(it);const $ele=$(`<div class="lst__row lst__row--sublist flex-col"><a href="#${hash}" class="lst--border lst__row-inner" title="${it.name}"><span class="bold col-12 px-0">${it.name}</span></a></div>`).contextmenu((evt=>ListUtil.openSubContextMenu(evt,listItem))).click((evt=>ListUtil.sublist.doSelect(listItem,evt)));const listItem=new ListItem(pinId,$ele,it.name,{hash:hash});return listItem}doLoadHash(id){Renderer.get().setFirstSection(true);const it=this._dataList[id];this._$pgContent.empty().append(RenderTables.$getRenderedTable(it));ListUtil.updateSelected()}async pDoLoadSubHash(sub){sub=this._filterBox.setFromSubHashes(sub);await ListUtil.pSetFromSubHashes(sub)}_getSearchCache(entity){if(!entity.rows&&!entity.tables)return"";const ptrOut={_:""};this._getSearchCache_handleEntryProp(entity,"rows",ptrOut);this._getSearchCache_handleEntryProp(entity,"tables",ptrOut);return ptrOut._}}const tablesPage=new TablesPage;window.addEventListener("load",(()=>tablesPage.pOnLoad()));
+"use strict";
+
+class TablesSublistManager extends SublistManager {
+	constructor () {
+		super({
+			sublistListOptions: {
+				sortByInitial: "sortName",
+			},
+		});
+	}
+
+	static get _ROW_TEMPLATE () {
+		return [
+			new SublistCellTemplate({
+				name: "Name",
+				css: "bold ve-col-12 px-0",
+				colStyle: "",
+			}),
+		];
+	}
+
+	pGetSublistItem (it, hash) {
+		const cellsText = [it.name];
+
+		const $ele = $(`<div class="lst__row lst__row--sublist ve-flex-col">
+			<a href="#${hash}" class="lst--border lst__row-inner" title="${it.name}">
+				${this.constructor._getRowCellsHtml({values: cellsText})}
+			</a>
+		</div>`)
+			.contextmenu(evt => this._handleSublistItemContextMenu(evt, listItem))
+			.click(evt => this._listSub.doSelect(listItem, evt));
+
+		const listItem = new ListItem(
+			hash,
+			$ele,
+			it.name,
+			{
+				hash,
+			},
+			{
+				entity: it,
+				mdRow: [...cellsText],
+			},
+		);
+		return listItem;
+	}
+}
+
+class TablesPage extends ListPage {
+	constructor () {
+		const pageFilter = new PageFilterTables();
+		super({
+			dataSource: DataUtil.table.loadJSON.bind(DataUtil.table),
+
+			pageFilter,
+
+			listOptions: {
+				sortByInitial: "sortName",
+			},
+
+			dataProps: ["table", "tableGroup"],
+
+			isMarkdownPopout: true,
+
+			listSyntax: new ListSyntaxTables({fnGetDataList: () => this._dataList}),
+		});
+	}
+
+	get _bindOtherButtonsOptions () {
+		return {
+			other: [
+				{
+					name: "Copy as CSV",
+					pFn: () => this._pCopyRenderedAsCsv(),
+				},
+			],
+		};
+	}
+
+	async _pCopyRenderedAsCsv () {
+		const ent = this._dataList[Hist.lastLoadedId];
+
+		const tbls = ent.tables || [ent];
+		const txt = tbls
+			.map(tbl => {
+				const parser = new DOMParser();
+				const rows = tbl.rows.map(row => row.map(cell => parser.parseFromString(`<div>${Renderer.get().render(cell)}</div>`, "text/html").documentElement.textContent));
+
+				const headerRowMetas = Renderer.table.getHeaderRowMetas(tbl) || [];
+				const [headerRowMetasAsHeaders, ...headerRowMetasAsRows] = headerRowMetas
+					.map(headerRowMeta => headerRowMeta.map(it => Renderer.stripTags(it)));
+
+				return DataUtil.getCsv(
+					headerRowMetasAsHeaders,
+					[
+						// If there are extra headers, treat them as rows
+						...headerRowMetasAsRows,
+						...rows,
+					],
+				);
+			})
+			.join("\n\n");
+
+		await MiscUtil.pCopyTextToClipboard(txt);
+		JqueryUtil.doToast("Copied!");
+	}
+
+	getListItem (it, tbI, isExcluded) {
+		this._pageFilter.mutateAndAddToFilters(it, isExcluded);
+
+		const sortName = it.name.replace(/^\s*([\d,.]+)\s*gp/, (...m) => m[1].replace(Parser._numberCleanRegexp, "").padStart(9, "0"));
+
+		const eleLi = document.createElement("div");
+		eleLi.className = `lst__row ve-flex-col ${isExcluded ? "lst__row--blocklisted" : ""}`;
+
+		const source = Parser.sourceJsonToAbv(it.source);
+		const hash = UrlUtil.autoEncodeHash(it);
+
+		eleLi.innerHTML = `<a href="#${hash}" class="lst--border lst__row-inner">
+			<span class="bold ve-col-10 pl-0">${it.name}</span>
+			<span class="ve-col-2 ve-text-center ${Parser.sourceJsonToColor(it.source)} pr-0" title="${Parser.sourceJsonToFull(it.source)}" ${Parser.sourceJsonToStyle(it.source)}>${source}</span>
+		</a>`;
+
+		const listItem = new ListItem(
+			tbI,
+			eleLi,
+			it.name,
+			{
+				hash,
+				sortName,
+				source,
+			},
+			{
+				isExcluded,
+			},
+		);
+
+		eleLi.addEventListener("click", (evt) => this._list.doSelect(listItem, evt));
+		eleLi.addEventListener("contextmenu", (evt) => this._openContextMenu(evt, this._list, listItem));
+
+		return listItem;
+	}
+
+	_renderStats_doBuildStatsTab ({ent}) {
+		this._$pgContent.empty().append(RenderTables.$getRenderedTable(ent));
+	}
+}
+
+const tablesPage = new TablesPage();
+tablesPage.sublistManager = new TablesSublistManager();
+window.addEventListener("load", () => tablesPage.pOnLoad());

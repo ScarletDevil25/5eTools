@@ -1,1 +1,112 @@
-"use strict";class RewardsPage extends ListPage{constructor(){const pageFilter=new PageFilterRewards;super({dataSource:"data/rewards.json",pageFilter:pageFilter,listClass:"rewards",sublistClass:"subrewards",dataProps:["reward"]})}getListItem(reward,rwI,isExcluded){this._pageFilter.mutateAndAddToFilters(reward,isExcluded);const eleLi=document.createElement("div");eleLi.className=`lst__row flex-col ${isExcluded?"lst__row--blacklisted":""}`;const source=Parser.sourceJsonToAbv(reward.source);const hash=UrlUtil.autoEncodeHash(reward);eleLi.innerHTML=`<a href="#${hash}" class="lst--border lst__row-inner">\n\t\t\t<span class="col-2 text-center pl-0">${reward.type}</span>\n\t\t\t<span class="bold col-8">${reward.name}</span>\n\t\t\t<span class="col-2 text-center ${Parser.sourceJsonToColor(reward.source)} pr-0" title="${Parser.sourceJsonToFull(reward.source)}" ${BrewUtil.sourceJsonToStyle(reward.source)}>${source}</span>\n\t\t</a>`;const listItem=new ListItem(rwI,eleLi,reward.name,{hash:hash,source:source,type:reward.type},{uniqueId:reward.uniqueId?reward.uniqueId:rwI,isExcluded:isExcluded});eleLi.addEventListener("click",(evt=>this._list.doSelect(listItem,evt)));eleLi.addEventListener("contextmenu",(evt=>ListUtil.openContextMenu(evt,this._list,listItem)));return listItem}handleFilterChange(){const f=this._filterBox.getValues();this._list.filter((item=>this._pageFilter.toDisplay(f,this._dataList[item.ix])));FilterBox.selectFirstVisible(this._dataList)}getSublistItem(reward,pinId){const hash=UrlUtil.autoEncodeHash(reward);const $ele=$(`<div class="lst__row lst__row--sublist flex-col">\n\t\t\t<a href="#${hash}" class="lst--border lst__row-inner">\n\t\t\t\t<span class="name col-2 pl-0 text-center">${reward.type}</span>\n\t\t\t\t<span class="name col-10 pr-0">${reward.name}</span>\n\t\t\t</a>\n\t\t</div>`).contextmenu((evt=>ListUtil.openSubContextMenu(evt,listItem))).click((evt=>ListUtil.sublist.doSelect(listItem,evt)));const listItem=new ListItem(pinId,$ele,reward.name,{hash:hash,type:reward.type});return listItem}doLoadHash(id){Renderer.get().setFirstSection(true);const reward=this._dataList[id];this._$pgContent.empty().append(RenderRewards.$getRenderedReward(reward));ListUtil.updateSelected()}async pDoLoadSubHash(sub){sub=this._filterBox.setFromSubHashes(sub);await ListUtil.pSetFromSubHashes(sub)}}const rewardsPage=new RewardsPage;window.addEventListener("load",(()=>rewardsPage.pOnLoad()));
+"use strict";
+
+class RewardsSublistManager extends SublistManager {
+	static get _ROW_TEMPLATE () {
+		return [
+			new SublistCellTemplate({
+				name: "Type",
+				css: "ve-col-2 pl-0 ve-text-center",
+				colStyle: "text-center",
+			}),
+			new SublistCellTemplate({
+				name: "Name",
+				css: "bold ve-col-10 pr-0",
+				colStyle: "",
+			}),
+		];
+	}
+
+	pGetSublistItem (reward, hash) {
+		const cellsText = [reward.type, reward.name];
+
+		const $ele = $(`<div class="lst__row lst__row--sublist ve-flex-col">
+			<a href="#${hash}" class="lst--border lst__row-inner">
+				${this.constructor._getRowCellsHtml({values: cellsText})}
+			</a>
+		</div>`)
+			.contextmenu(evt => this._handleSublistItemContextMenu(evt, listItem))
+			.click(evt => this._listSub.doSelect(listItem, evt));
+
+		const listItem = new ListItem(
+			hash,
+			$ele,
+			reward.name,
+			{
+				hash,
+				type: reward.type,
+			},
+			{
+				entity: reward,
+				mdRow: [...cellsText],
+			},
+		);
+		return listItem;
+	}
+}
+
+class RewardsPage extends ListPage {
+	constructor () {
+		const pageFilter = new PageFilterRewards();
+		super({
+			dataSource: DataUtil.reward.loadJSON.bind(DataUtil.reward),
+
+			pFnGetFluff: Renderer.reward.pGetFluff.bind(Renderer.feat),
+
+			pageFilter,
+
+			dataProps: ["reward"],
+
+			isPreviewable: true,
+
+			isMarkdownPopout: true,
+		});
+	}
+
+	getListItem (reward, rwI, isExcluded) {
+		this._pageFilter.mutateAndAddToFilters(reward, isExcluded);
+
+		const eleLi = document.createElement("div");
+		eleLi.className = `lst__row ve-flex-col ${isExcluded ? "lst__row--blocklisted" : ""}`;
+
+		const source = Parser.sourceJsonToAbv(reward.source);
+		const hash = UrlUtil.autoEncodeHash(reward);
+
+		eleLi.innerHTML = `<a href="#${hash}" class="lst--border lst__row-inner">
+			<span class="ve-col-0-3 px-0 ve-flex-vh-center lst__btn-toggle-expand ve-self-flex-stretch">[+]</span>
+			<span class="ve-col-2 ve-text-center px-1">${reward.type}</span>
+			<span class="bold ve-col-7-7">${reward.name}</span>
+			<span class="ve-col-2 ve-text-center ${Parser.sourceJsonToColor(reward.source)} pr-0" title="${Parser.sourceJsonToFull(reward.source)}" ${Parser.sourceJsonToStyle(reward.source)}>${source}</span>
+		</a>
+		<div class="ve-flex ve-hidden relative lst__wrp-preview">
+			<div class="vr-0 absolute lst__vr-preview"></div>
+			<div class="ve-flex-col py-3 ml-4 lst__wrp-preview-inner"></div>
+		</div>`;
+
+		const listItem = new ListItem(
+			rwI,
+			eleLi,
+			reward.name,
+			{
+				hash,
+				source,
+				type: reward.type,
+			},
+			{
+				isExcluded,
+			},
+		);
+
+		eleLi.addEventListener("click", (evt) => this._list.doSelect(listItem, evt));
+		eleLi.addEventListener("contextmenu", (evt) => this._openContextMenu(evt, this._list, listItem));
+
+		return listItem;
+	}
+
+	_renderStats_doBuildStatsTab ({ent}) {
+		this._$pgContent.empty().append(RenderRewards.$getRenderedReward(ent));
+	}
+}
+
+const rewardsPage = new RewardsPage();
+rewardsPage.sublistManager = new RewardsSublistManager();
+window.addEventListener("load", () => rewardsPage.pOnLoad());
