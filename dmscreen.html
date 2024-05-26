@@ -8,18 +8,18 @@
 	<meta charset="utf-8">
 	<meta name="description" content="">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 	<meta name="apple-mobile-web-app-capable" content="yes">
 
 	<title>DM Screen - 5etools</title>
 
-	<link rel="stylesheet" href="css/bootstrap.css?v=1.134.0">
-	<link rel="stylesheet" href="css/fontawesome.css?v=1.134.0">
-	<link rel="stylesheet" href="css/main.css?v=1.134.0">
-	<link rel="stylesheet" href="css/dmscreen.css?v=1.134.0">
+	<link rel="stylesheet" href="css/bootstrap.css">
+	<link rel="stylesheet" href="css/fontawesome.css">
+	<link rel="stylesheet" href="css/main.css">
+	<link rel="stylesheet" href="css/dmscreen.css">
 
 	<!-- Favicons -->
-	<link rel="icon" type="image/svg+xml" href="favicon.svg?v=1.115">
+	<link rel="icon" type="image/svg+xml" href="favicon.svg">
 	<link rel="icon" type="image/png" sizes="256x256" href="favicon-256x256.png">
 	<link rel="icon" type="image/png" sizes="144x144" href="favicon-144x144.png">
 	<link rel="icon" type="image/png" sizes="128x128" href="favicon-128x128.png">
@@ -48,25 +48,29 @@
 	<!-- macOS Safari Pinned Tab and Touch Bar -->
 	<link rel="mask-icon" href="safari-pinned-tab.svg" color="#006bc4">
 
-	<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js?v=1.134.0");</script>
+	<!-- OpenSearch -->
+	<link rel="search" href="open-search.xml" title="Search 5etools" type="application/opensearchdescription+xml">
 
-	<script type="text/javascript" src="js/header.js?v=1.134.0"></script>
+	<script type="text/javascript" src="sw-injector.js"></script>
+
+	<script type="text/javascript" src="js/styleswitch.js"></script>
+	<script type="text/javascript" src="js/navigation.js"></script>
+	<script type="text/javascript" src="js/browsercheck.js"></script>
 </head>
 
 <body>
 <div class="viewport-wrapper">
 	<header class="hidden-xs hidden-sm page__header">
-		<div class="container">
-
-			<h1 class="page__title">DM Screen</h1>
-			<p class="page__subtitle">Build a personalised DM screen</p>
+		<div class="container ve-flex-v-baseline">
+			<h1 class="page__title no-wrap my-0">DM Screen</h1>
+			<p class="page__subtitle no-wrap my-0" id="page__subtitle">Build a personalised DM screen</p>
 		</div>
 	</header>
 	<nav class="container page__nav" id="navigation">
 		<ul class="nav nav-pills page__nav-inner" id="navbar">
 		</ul>
 	</nav>
-	<div class="dm-screen">
+	<div class="dm-screen min-h-0">
 		<div class="sidemenu__toggle">
 			<div class="sidemenu__hotzone"></div>
 			<div class="sidemenu__burger"></div>
@@ -83,20 +87,24 @@
 <script type="text/javascript" src="lib/jquery.js"></script>
 <script type="text/javascript" src="lib/jquery.panzoom.js"></script>
 <script type="text/javascript" src="lib/lzma.js"></script>
-<script type="text/javascript" src="js/shared.js?v=1.134.0"></script>
-<script type="text/javascript" src="js/utils-p2p.js?v=1.134.0"></script>
+<script type="text/javascript" src="js/parser.js"></script>
+<script type="text/javascript" src="js/utils.js"></script>
+<script type="text/javascript" src="js/utils-ui.js"></script>
+<script type="text/javascript" src="js/utils-list.js"></script>
+<script type="text/javascript" src="js/utils-p2p.js"></script>
 <script type="text/javascript" src="lib/localforage.js"></script>
-<script type="text/javascript" src="js/render-map.js?v=1.134.0"></script>
-<script type="text/javascript" src="js/initiativetrackerutils.js?v=1.134.0"></script>
-<script type="text/javascript" src="js/dmscreen.js?v=1.134.0"></script>
-<script type="text/javascript" src="js/dmscreen-initiativetracker.js?v=1.134.0"></script>
-<script type="text/javascript" src="js/dmscreen-playerinitiativetracker.js?v=1.134.0"></script>
-<script type="text/javascript" src="js/dmscreen-moneyconverter.js?v=1.134.0"></script>
-<script type="text/javascript" src="js/dmscreen-timetracker.js?v=1.134.0"></script>
-<script type="text/javascript" src="js/dmscreen-counter.js?v=1.134.0"></script>
-<script type="text/javascript" src="js/dmscreen-mapper.js?v=1.134.0"></script>
-<script type="text/javascript" src="js/list2.js?v=1.134.0"></script>
-<script type="text/javascript" src="lib/bootstrap-tooltip.js"></script>
+<script type="text/javascript" src="js/omnidexer.js"></script>
+<script type="text/javascript" src="js/omnisearch.js"></script>
+<script type="text/javascript" src="js/filter.js"></script>
+<script type="text/javascript" src="js/utils-dataloader.js"></script>
+<script type="text/javascript" src="js/utils-brew.js"></script>
+<script type="text/javascript" src="js/render.js"></script>
+<script type="text/javascript" src="js/render-dice.js"></script>
+<script type="text/javascript" src="js/render-map.js"></script>
+<script type="text/javascript" src="js/scalecreature.js"></script>
+<script type="text/javascript" src="js/hist.js"></script>
+<script type="module" src="js/dmscreen.js"></script>
+<script type="text/javascript" src="js/list2.js"></script>
 <script type="text/javascript" src="lib/elasticlunr.js"></script>
 </body>
 

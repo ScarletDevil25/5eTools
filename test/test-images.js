@@ -1,107 +1,187 @@
-const fs = require("fs");
-require("../js/utils");
+import fs from "fs";
+import path from "path";
+import "../js/parser.js";
+import "../js/utils.js";
+import * as ut from "../node/util.js";
+import {listFiles} from "../node/util.js";
 
-const expected = new Set();
-const expectedDirs = {};
-const existing = new Set();
-const expectedFromHashToken = {};
+class _TestTokenImages {
+	static _IS_CLEAN_EXTRAS = false;
+	static _IS_MOVE_EXTRAS = false;
+	static _SOURCES_CLEAN_EXTRAS = [
+		Parser.SRC_MM,
+		Parser.SRC_MPMM,
+		Parser.SRC_BAM,
+		Parser.SRC_VRGR,
+	];
 
-// Loop through each bestiary-related img directory and push the list of files in each.
-if (fs.existsSync("./img")) {
-	console.log(`##### Reconciling the PNG tokens against the bestiary JSON #####`);
+	static _PATH_BASE = `./img/bestiary/tokens`;
+	static _EXT = "webp";
 
-	// Loop through each bestiary JSON file push the list of expected PNG files.
-	fs.readdirSync("./data/bestiary")
-		.filter(file => file.startsWith("bestiary") && file.endsWith(".json"))
-		.forEach(file => {
-			const result = JSON.parse(fs.readFileSync(`./data/bestiary/${file}`));
-			result.monster.forEach(m => {
-				const source = Parser.sourceJsonToAbv(m.source);
-				const implicitTokenPath = `${source}/${Parser.nameToTokenName(m.name)}.png`;
-
-				if (m.hasToken) expectedFromHashToken[implicitTokenPath] = true;
-
-				if (fs.existsSync(`./img/${source}`)) {
-					expected.add(implicitTokenPath);
-
-					// add tokens specified as part of variants
-					if (m.variant) {
-						m.variant.filter(it => it.token).forEach(entry => expected.add(`${Parser.sourceJsonToAbv(entry.token.source)}/${Parser.nameToTokenName(entry.token.name)}.png`));
-					}
-
-					// add tokens specified as alt art
-					if (m.altArt) {
-						m.altArt.forEach(alt => expected.add(`${Parser.sourceJsonToAbv(alt.source)}/${Parser.nameToTokenName(alt.name)}.png`))
-					}
-				} else expectedDirs[source] = true;
-			});
-		});
-
-	const IGNORED_PREFIXES = [
+	static _IGNORED_PREFIXES = [
 		".",
 		"_",
 	];
 
-	const IGNORED_EXTENSIONS = [
-		".git",
-		".gitignore",
-		".png",
-		".txt",
-	];
+	static _expected = new Set();
+	static _expectedDirs = {};
+	static _existing = new Set();
+	static _expectedFromHashToken = {};
 
-	const IGNORED_DIRS = new Set([
-		"adventure",
-		"backgrounds",
-		"dmscreen",
-		"deities",
-		"variantrules",
-		"rules",
-		"objects",
-		"bestiary",
-		"roll20",
-		"book",
-		"items",
-		"races",
-		"vehicles",
-		"characters",
-		"conditionsdiseases",
-		"languages",
-		"plutonium",
-		"covers",
-		"spells",
-		"charcreationoptions",
-		"recipes",
-	]);
+	static _existingSourceTokens = null;
 
-	fs.readdirSync("./img")
-		.filter(file => !(IGNORED_PREFIXES.some(it => file.startsWith(it) || IGNORED_EXTENSIONS.some(it => file.endsWith(it)))))
-		.forEach(dir => {
-			if (!IGNORED_DIRS.has(dir)) {
-				fs.readdirSync(`./img/${dir}`).forEach(file => {
-					existing.add(`${dir.replace("(", "").replace(")", "")}/${file}`);
-				})
+	static _isExistingSourceToken ({filename, src}) {
+		(this._existingSourceTokens ||= {})[src] ||= fs.readdirSync(`${this._PATH_BASE}/${src}`).mergeMap(it => ({[it]: true}));
+		return !!this._existingSourceTokens[src][filename.split("/").last()];
+	}
+
+	static _readBestiaryJson () {
+		fs.readdirSync("./data/bestiary")
+			.filter(file => file.startsWith("bestiary") && file.endsWith(".json"))
+			.forEach(file => {
+				ut.readJson(`./data/bestiary/${file}`).monster
+					.forEach(m => {
+						const implicitTokenPath = `${this._PATH_BASE}/${m.source}/${Parser.nameToTokenName(m.name)}.${this._EXT}`;
+
+						if (m.hasToken) this._expectedFromHashToken[implicitTokenPath] = true;
+
+						if (!fs.existsSync(`${this._PATH_BASE}/${m.source}`)) {
+							this._expectedDirs[m.source] = true;
+							return;
+						}
+
+						this._expected.add(implicitTokenPath);
+
+						// add tokens specified as part of variants
+						if (m.variant) {
+							m.variant
+								.filter(it => it.token)
+								.forEach(entry => this._expected.add(`${this._PATH_BASE}/${entry.token.source}/${Parser.nameToTokenName(entry.token.name)}.${this._EXT}`));
+						}
+
+						// add tokens specified as alt art
+						if (m.altArt) {
+							m.altArt
+								.forEach(alt => this._expected.add(`${this._PATH_BASE}/${alt.source}/${Parser.nameToTokenName(alt.name)}.${this._EXT}`));
+						}
+					});
+			});
+	}
+
+	static _readImageDirs () {
+		fs.readdirSync(this._PATH_BASE)
+			.filter(file => !(this._IGNORED_PREFIXES.some(it => file.startsWith(it))))
+			.forEach(dir => {
+				fs.readdirSync(`${this._PATH_BASE}/${dir}`)
+					.forEach(file => {
+						this._existing.add(`${this._PATH_BASE}/${dir.replace("(", "").replace(")", "")}/${file}`);
+					});
+			});
+	}
+
+	static _getIsError () {
+		let isError = false;
+		const results = [];
+		this._expected.forEach((img) => {
+			if (!this._existing.has(img)) results.push(`[ MISSING] ${img}`);
+		});
+		this._existing.forEach((img) => {
+			delete this._expectedFromHashToken[img];
+
+			if (!this._expected.has(img)) {
+				if (this._IS_CLEAN_EXTRAS) {
+					const srcExisting = this._SOURCES_CLEAN_EXTRAS
+						.find(src => this._isExistingSourceToken({filename: img, src}));
+					if (srcExisting) {
+						fs.unlinkSync(img);
+						results.push(`[ !DELETE] ${img} (found in "${srcExisting}")`);
+						return;
+					}
+				}
+
+				if (this._IS_MOVE_EXTRAS) {
+					const dir = path.join(path.dirname(img), "extras");
+					fs.mkdirSync(dir, {recursive: true});
+					fs.copyFileSync(img, path.join(dir, path.basename(img)));
+					fs.unlinkSync(img);
+				}
+
+				results.push(`[   EXTRA] ${img}`);
+				isError = true;
 			}
 		});
 
-	const results = [];
-	expected.forEach((img) => {
-		if (!existing.has(img)) results.push(`[ MISSING] ${img}`);
-	});
-	existing.forEach((img) => {
-		delete expectedFromHashToken[img];
-		if (!expected.has(img)) {
-			// fs.unlinkSync(`./img/${img}`);
-			results.push(`[   EXTRA] ${img}`);
-		}
-	});
+		Object.keys(this._expectedDirs).forEach(k => results.push(`Directory ${k} doesn't exist!`));
+		results
+			.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
+			.forEach((img) => console.warn(img));
 
-	Object.keys(expectedDirs).forEach(k => results.push(`Directory ${k} doesn't exist!`));
-	results
-		.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
-		.forEach((img) => console.warn(img));
+		if (Object.keys(this._expectedFromHashToken).length) console.warn(`Declared in Bestiary data but not found:`);
+		Object.keys(this._expectedFromHashToken).forEach(img => console.warn(`[MISMATCH] ${img}`));
 
-	if (Object.keys(expectedFromHashToken).length) console.warn(`Declared in Bestiary data but not found:`);
-	Object.keys(expectedFromHashToken).forEach(img => console.warn(`[MISMATCH] ${img}`));
+		if (!this._expected.size && !Object.keys(this._expectedFromHashToken).length) console.log("Tokens are as expected.");
 
-	if (!expected.size && !Object.keys(expectedFromHashToken).length) console.log("Tokens are as expected.");
+		return isError;
+	}
+
+	static run () {
+		console.log(`##### Reconciling the PNG tokens against the bestiary JSON #####`);
+
+		this._readBestiaryJson();
+		this._readImageDirs();
+
+		return this._getIsError();
+	}
 }
+
+class _TestAdventureBookImages {
+	static run () {
+		const pathsMissing = [];
+
+		const walker = MiscUtil.getWalker({isNoModification: true});
+
+		const getHandler = (filename, out) => {
+			const checkHref = (href) => {
+				if (href?.type !== "internal") return;
+				if (fs.existsSync(`./img/${href.path}`)) return;
+				out.push(`${filename} :: ${href.path}`);
+			};
+
+			return (obj) => {
+				if (obj.type !== "image") return;
+				checkHref(obj.href);
+				checkHref(obj.hrefThumbnail);
+			};
+		};
+
+		listFiles()
+			.forEach(filepath => {
+				const json = ut.readJson(filepath);
+				walker.walk(
+					json,
+					{
+						object: getHandler(filepath, pathsMissing),
+					},
+				);
+			});
+
+		if (pathsMissing.length) {
+			console.log(`Missing Images:\n${pathsMissing.map(it => `\t${it}`).join("\n")}`);
+			return true;
+		}
+
+		console.log(`##### Missing Image Test Passed #####`);
+		return false;
+	}
+}
+
+function main () {
+	if (!fs.existsSync("./img")) return true;
+
+	if (_TestTokenImages.run()) return false;
+	if (_TestAdventureBookImages.run()) return false;
+
+	return true;
+}
+
+export default main();
