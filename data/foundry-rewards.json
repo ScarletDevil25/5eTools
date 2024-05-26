@@ -6,15 +6,21 @@
 			"effects": [
 				{
 					"name": "HP Increase",
+					"transfer": true,
 					"changes": [
 						{
-							"key": "data.attributes.hp.max",
+							"key": "system.attributes.hp.bonuses.overall",
 							"mode": "ADD",
-							"value": "40"
+							"value": "+ 40"
 						}
 					]
 				}
 			]
+		},
+		{
+			"name": "Curse of Ruin",
+			"source": "TDCSR",
+			"img": "icons/magic/holy/chalice-glowing-yellow-blue.webp"
 		}
 	]
 }
