@@ -1,8 +1,8 @@
-@import "vars";
+@use "../vars/vars";
 
 .clickable {
 	&--link {
-		color: $rgb-link-blue !important;
+		color: vars.$rgb-link-blue !important;
 	}
 }
 
@@ -13,7 +13,7 @@
 }
 
 .fade {
-	transition: opacity $time-3-frames linear;
+	transition: opacity vars.$time-3-frames linear;
 }
 
 .float-clear {
@@ -23,21 +23,39 @@
 .stripe- {
 	&even {
 		&:nth-child(even) {
-			background: $rgb-stripe-grey;
+			background: vars.$rgb-stripe-grey;
 		}
 
 		&--faint:nth-child(even) {
-			background: $rgb-stripe-grey--faint;
+			background: vars.$rgb-stripe-grey--faint;
 		}
 	}
 
 	&odd {
 		&:nth-child(odd) {
-			background: $rgb-stripe-grey;
+			background: vars.$rgb-stripe-grey;
 		}
 
 		&--faint:nth-child(odd) {
-			background: $rgb-stripe-grey--faint;
+			background: vars.$rgb-stripe-grey--faint;
+		}
+	}
+
+	&child- {
+		&even-first {
+			&:nth-child(even) > :first-child {
+				background: vars.$rgb-stripe-grey;
+			}
+		}
+	}
+}
+
+.veapp {
+	&__ {
+		&ele-hoverable {
+			&:hover {
+				background: vars.$rgb-bg--alt;
+			}
 		}
 	}
 }

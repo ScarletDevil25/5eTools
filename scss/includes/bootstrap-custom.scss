@@ -1,20 +1,31 @@
-@import "vars";
+@use "../vars/vars";
+@use "../vars/vars-night";
 
+:root {
+	--safe-area-inset-top: 0;
+	--safe-area-inset-right: 0;
+	--safe-area-inset-bottom: 0;
+	--safe-area-inset-left: 0;
+}
 
 // region Fix Glyphicon alignments
 .glyphicon-send {
 	top: 2px;
 	right: 1px;
 }
+
+.glyphicon--top-2p {
+	top: 2px;
+}
 // endregion
 
 .roller {
-	color: $rgb-link-blue;
+	color: vars.$rgb-link-blue;
 	cursor: pointer;
 }
 
 .text-muted a {
-	color: $rgb-link-blue--muted;
+	color: vars.$rgb-link-blue--muted;
 }
 
 .font-ui {
@@ -25,7 +36,7 @@
 .help--hover {
 	// This should approx. match the hover cutoff defined in renderer (768px).
 	// Approximate, since jQuery calculates window width differently, offset likely varies with e.g. scrollbar width.
-	@media (max-width: 780px) {
+	@media screen and (width <= #{vars.$width-screen-sm}) {
 		cursor: default !important;
 		text-decoration: none !important;
 	}
@@ -33,8 +44,13 @@
 
 /* Base elements */
 body {
-	min-height: 100%;
+	min-height: 100vh;
 	position: relative;
+	overflow-x: hidden;
+
+	// :^)
+	// TODO(iOS) deploy sensibly if this "concept" works
+	padding: var(--safe-area-inset-top) var(--safe-area-inset-right) var(--safe-area-inset-bottom) var(--safe-area-inset-left);
 
 	&.is-fullscreen .page__header {
 		display: none;
@@ -50,13 +66,8 @@ input {
 	min-width: 0;
 }
 
-label {
-	font-weight: initial;
-	margin: 0;
-}
-
-input[type=checkbox],
-input[type=radio] {
+input[type="checkbox"],
+input[type="radio"] {
 	margin: 0;
 }
 
@@ -81,8 +92,11 @@ hr {
 /* *** */
 
 /* custom scrollbars */
-* {
-	scrollbar-width: thin;
+// Firefox only--use thinner scrollbars where possible (Chrome uses `-webkit` custom styling instead)
+@-moz-document url-prefix() {
+	* {
+		scrollbar-width: thin;
+	}
 }
 
 ::-webkit-scrollbar {
@@ -104,7 +118,7 @@ body {
 }
 
 body::-webkit-scrollbar {
-	width: $w-scroll-body;
+	width: vars.$w-scroll-body;
 }
 
 /* *** */
@@ -115,7 +129,7 @@ body::-webkit-scrollbar {
 }
 
 .input-xs {
-	height: 22px;
+	height: vars.$h-ipt-xs;
 	padding: 1px 5px;
 	font-size: 12px;
 	line-height: 1.5;
@@ -127,12 +141,12 @@ body::-webkit-scrollbar {
 	padding: 0 2px;
 }
 
-.flex-label {
+.ve-flex-label {
 	display: inline-flex;
 	align-items: center;
 
-	> input[type=checkbox],
-	> input[type=radio] {
+	> input[type="checkbox"],
+	> input[type="radio"] {
 		margin: 0 0 0 5px;
 	}
 }
@@ -145,10 +159,10 @@ body::-webkit-scrollbar {
 }
 
 .btn-primary--half {
-	background: repeating-linear-gradient(135deg, $rgb-btn-primary-blue, $rgb-btn-primary-blue 16px, $rgb-btn-primary-blue--desaturated 16px, $rgb-btn-primary-blue--desaturated 32px);
+	background: repeating-linear-gradient(135deg, vars.$rgb-btn-primary-blue, vars.$rgb-btn-primary-blue 16px, vars.$rgb-btn-primary-blue--desaturated 16px, vars.$rgb-btn-primary-blue--desaturated 32px);
 }
 
-.dropdown-menu--side {
+.ve-dropdown-menu--side {
 	top: -10px;
 	left: 100%;
 	max-height: calc(100vh - 130px);
@@ -159,13 +173,13 @@ body::-webkit-scrollbar {
 	> a {
 		padding: 5px 14px 6px;
 
-		@media (min-width: 992px) {
+		@media screen and (width > #{vars.$width-screen-md}) {
 			border-top-left-radius: 0;
 			border-top-right-radius: 0;
 		}
 	}
 
-	@media (max-width: 991px) {
+	@media screen and (width <= #{vars.$width-screen-md}) {
 		margin-top: 2px;
 		margin-bottom: 2px;
 	}
@@ -177,7 +191,7 @@ body::-webkit-scrollbar {
 	background-color: #006bc4;
 	border-top: 0;
 
-	@media (min-width: 992px) {
+	@media screen and (width > #{vars.$width-screen-md}) {
 		border-left: 1px solid transparent;
 		border-right: 1px solid transparent;
 		border-bottom: 1px solid #999;
@@ -186,13 +200,13 @@ body::-webkit-scrollbar {
 
 .nav > li > a:focus,
 .nav > li > a:hover {
-	background-color: rgba(0, 0, 0, 0.1);
+	background-color: rgb(0 0 0 / 10%);
 }
 
 .nav .open > a,
 .nav .open > a:focus,
 .nav .open > a:hover {
-	background-color: rgba(0, 0, 0, 0.1);
+	background-color: rgb(0 0 0 / 10%);
 }
 
 .row {
@@ -200,23 +214,23 @@ body::-webkit-scrollbar {
 	margin-left: 0;
 }
 
-.dropdown-menu > li > a.dropdown-ext-link {
+.ve-dropdown-menu > li > a.ve-dropdown-ext-link {
 	display: flex;
 	justify-content: space-between;
 }
 
-.dropdown-menu > li > a.dropdown-ext-link:hover {
+.ve-dropdown-menu > li > a.ve-dropdown-ext-link:hover {
 	padding-right: 10px;
 }
 
 /* Allow spans instead of links in dropdown menus. Styling borrowed from original */
-.dropdown-menu > li > span {
+.ve-dropdown-menu > li > span {
 	cursor: pointer;
 	display: block;
 	padding: 3px 20px;
 	clear: both;
 	font-weight: 400;
-	line-height: 1.42857143;
+	line-height: vars.$font-line-height;
 	color: #333;
 	white-space: nowrap;
 
@@ -224,17 +238,17 @@ body::-webkit-scrollbar {
 	&:hover {
 		color: #262626;
 		text-decoration: none;
-		background-color: whitesmoke;
+		background-color: vars.$rgb-bg--alt;
 	}
 }
 
-.dropdown-menu > .disabled > span {
+.ve-dropdown-menu > .disabled > span {
 	pointer-events: none;
-	color: $rgb-ctx-item-text-disabled;
+	color: vars.$rgb-ctx-item-text-disabled;
 
 	&:focus,
 	&:hover {
-		color: $rgb-ctx-item-text-disabled;
+		color: vars.$rgb-ctx-item-text-disabled;
 		text-decoration: none;
 		cursor: not-allowed;
 		background-color: transparent;
@@ -242,34 +256,30 @@ body::-webkit-scrollbar {
 	}
 }
 
-.dropdown-menu > .ctx-danger > span {
-	background: $rgb-btn-danger-bg-red;
-	color: white;
+.ve-dropdown-menu > .ctx-danger > span {
+	background: vars.$rgb-btn-danger-bg-red;
+	color: #fff;
 
 	&:focus,
 	&:hover {
-		color: white;
+		color: #fff;
 		text-decoration: none;
-		background-color: $rgb-btn-danger-border-red;
+		background-color: vars.$rgb-btn-danger-border-red;
 	}
 }
 /* *** */
 
-.dropdown-ext-link > .glyphicon {
+.ve-dropdown-ext-link > .glyphicon {
 	top: 3px;
 	display: none;
 }
 
-.dropdown-ext-link:hover > .glyphicon {
+.ve-dropdown-ext-link:hover > .glyphicon {
 	display: inline-block;
 }
 
 .caret--right {
 	transform: rotate(270deg);
-}
-
-.caret--reverse {
-	transform: rotate(180deg);
 }
 
 // region Override defaults to better implement filter UI
@@ -289,7 +299,7 @@ body::-webkit-scrollbar {
 		&:last-child {
 			border-top-right-radius: 3px;
 			border-bottom-right-radius: 3px;
-			border-right: 1px solid $rgb-border-grey;
+			border-right: 1px solid vars.$rgb-border-grey;
 		}
 	}
 
@@ -344,13 +354,13 @@ body::-webkit-scrollbar {
 	}
 }
 
-.night-mode .input-group {
+.ve-night-mode .input-group {
 	> input.form-control,
 	> label,
 	> button,
 	> a.btn {
 		&:last-child {
-			border-right-color: $rgb-border-grey--night;
+			border-right-color: vars-night.$rgb-border-grey--night;
 		}
 	}
 }

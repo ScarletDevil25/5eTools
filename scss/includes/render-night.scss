@@ -1,27 +1,37 @@
-@import "vars";
+@use "../vars/vars-night";
 
-.night-mode .rd {
+.ve-night-mode .rd {
 	&__ {
+		&wrp-image {
+			&--bg-light {
+				background-color: vars-night.$rgb-font--night;
+			}
+
+			&--bg-dark {
+				background-color: vars-night.$rgb-bg--alt-night;
+			}
+		}
+
 		&h--0,
 		&h--1,
 		&h--2 {
-			color: $rgb-name-red--night;
+			color: vars-night.$rgb-name-red--night;
 		}
 
 		&h--1 {
-			border-bottom-color: $rgb-name-red--night;
+			border-bottom-color: vars-night.$rgb-name-red--night;
 		}
 
 		&h--4 {
-			color: $rgb-name-alt--night;
+			color: vars-night.$rgb-name-alt--night;
 		}
 
 		&h--3 {
-			color: $rgb-name-alt--night;
+			color: vars-night.$rgb-name-alt--night;
 		}
 
 		&-image-title-inner {
-			border-color: $rgb-border-grey--night;
+			border-color: vars-night.$rgb-border-grey--night;
 		}
 
 		&b-inset {
@@ -30,6 +40,10 @@
 			&--readaloud {
 				background-color: #28303a;
 			}
+		}
+
+		&b-data {
+			border-color: vars-night.$rgb-border-grey--statblock-night;
 		}
 
 		&b-flow {
@@ -41,78 +55,64 @@
 		}
 
 		&stats-name-page {
-			color: $rgb-font--night;
+			color: vars-night.$rgb-font--night;
 		}
 
 		&highlight {
-			background-color: $rgb-bg-highlight--night;
-			color: $rgb-bg--night;
+			background-color: vars-night.$rgb-bg-highlight--night;
+			color: vars-night.$rgb-bg--night;
+		}
+
+		&scroller-viewer {
+			&--bg-light {
+				background-color: vars-night.$rgb-font--night;
+			}
+
+			&--bg-dark {
+				background-color: vars-night.$rgb-bg--alt-night;
+			}
 		}
 	}
 
 	&-item__ {
 		&type-rarity-attunement {
-			color: $rgb-font--night;
+			color: vars-night.$rgb-font--night;
 		}
 	}
 
 	&-spell__ {
 		&level-school-ritual {
-			color: $rgb-font--night;
+			color: vars-night.$rgb-font--night;
 		}
 	}
 
 	&-ability-icon {
 		&__ {
 			&fill-primary {
-				fill: $rgb-font--night;
+				fill: vars-night.$rgb-font--night;
 			}
 
 			&fill-bg {
-				fill: $rgb-bg--night;
+				fill: vars-night.$rgb-bg--night;
 			}
 
 			&stroke-bg {
-				stroke: $rgb-bg--night;
+				stroke: vars-night.$rgb-bg--night;
 			}
 		}
 	}
-}
 
-// region Source colors
-.subclass-feature {
-	.rd__h--0,
-	.rd__h--1,
-	.rd__h--2 {
-		color: $rgb-subclass--night;
-		border-bottom-color: $rgb-subclass--night;
+	&-homebrew__ {
+		&b {
+			background-color: vars-night.$rgb-bg-homebrew--night;
+		}
+
+		&disp-old-content {
+			color: #f99;
+		}
+
+		&disp-inline {
+			background-color: vars-night.$rgb-bg-homebrew--night;
+		}
 	}
 }
-
-.spicy-sauce {
-	.rd__h--0,
-	.rd__h--1,
-	.rd__h--2 {
-		color: $rgb-subclass-ua--night;
-		border-bottom-color: $rgb-subclass-ua--night;
-	}
-}
-
-.spicy-sauce:not(.subclass-feature):not(.subclass-feature--sub) {
-	.rd__h--0,
-	.rd__h--1,
-	.rd__h--2 {
-		color: $rgb-class-ua--night;
-		border-bottom-color: $rgb-class-ua--night;
-	}
-}
-
-.refreshing-brew {
-	.rd__h--0,
-	.rd__h--1,
-	.rd__h--2 {
-		color: $rgb-class-brew--night;
-		border-bottom-color: $rgb-class-brew--night;
-	}
-}
-// endregion

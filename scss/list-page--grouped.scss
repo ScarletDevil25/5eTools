@@ -1,8 +1,17 @@
-.lst__item-group-header {
-	user-select: none;
-	font-weight: bold;
-	font-size: 14px;
-	padding: 3px 0 1px;
+@use "vars/vars";
+@use "vars/vars-night";
+
+.lst__ {
+	&item-group-header {
+		font-size: 14px;
+		background: vars.$rgb-bg--alt;
+	}
+}
+
+.ve-night-mode .lst__ {
+	&item-group-header {
+		background: vars-night.$rgb-bg--alt-night;
+	}
 }
 
 #listcontainer {
